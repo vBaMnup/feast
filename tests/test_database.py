@@ -7,12 +7,15 @@ from src.database import get_db
 
 
 class TestGetDB:
-    """Тесты для функции get_db."""
+    """Tests for get_db function."""
 
     def test_normal_execution(self, mock_session_local, mock_session):
         """
-        Тест 1: Нормальное выполнение функции.
-        Проверяет, что функция возвращает сессию и закрывает её после использования.
+        Test for normal execution.
+
+        Args:
+            mock_session_local (MagicMock): Mocked session factory.
+            mock_session (MagicMock): Mocked session instance.
         """
 
         db_generator = get_db()
@@ -30,9 +33,13 @@ class TestGetDB:
 
     def test_with_exception_during_usage(self, mock_session_local, mock_session):
         """
-        Тест 2: Использование с исключением.
-        Проверяет, что сессия закрывается даже при возникновении исключения.
+        Test for usage with exception during usage.
+
+        Args:
+            mock_session_local (MagicMock): Mocked session factory.
+            mock_session (MagicMock): Mocked session instance.
         """
+
         db_generator = get_db()
         db = next(db_generator)
 
@@ -49,8 +56,10 @@ class TestGetDB:
     @patch("src.database.SessionLocal")
     def test_session_creation_error(self, mock_sessionlocal):
         """
-        Тест 3: Ошибка при создании сессии.
-        Проверяет поведение при ошибке создания сессии.
+        Test for session creation error.
+
+        Args:
+            mock_sessionlocal (MagicMock): Mocked session factory.
         """
 
         mock_sessionlocal.side_effect = OperationalError(
@@ -63,8 +72,11 @@ class TestGetDB:
 
     def test_context_manager_usage(self, mock_session_local, mock_session):
         """
-        Тест 4: Использование в качестве контекстного менеджера.
-        Проверяет корректное использование функции в конструкции with.
+        Test for context manager usage.
+
+        Args:
+            mock_session_local (MagicMock): Mocked session factory.
+            mock_session (MagicMock): Mocked session instance.
         """
 
         db_generator = get_db()
@@ -83,8 +95,11 @@ class TestGetDB:
     @patch("src.database.SessionLocal")
     def test_multiple_calls(self, mock_sessionlocal, mock_session):
         """
-        Тест 5: Множественные вызовы функции.
-        Проверяет, что каждый вызов создает новую сессию.
+        Test for multiple calls.
+
+        Args:
+            mock_sessionlocal (MagicMock): Mocked session factory.
+            mock_session (MagicMock): Mocked session instance.
         """
 
         session1 = MagicMock()
@@ -116,8 +131,10 @@ class TestGetDB:
     @patch("src.database.SessionLocal")
     def test_db_error_on_close(self, mock_sessionlocal):
         """
-        Тест 6: Ошибка при закрытии сессии.
-        Проверяет поведение при возникновении ошибки во время закрытия сессии.
+        Test for db error on close.
+
+        Args:
+            mock_sessionlocal (MagicMock): Mocked session factory.
         """
 
         session_mock = MagicMock()
