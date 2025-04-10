@@ -37,7 +37,7 @@ def setup_database():
     :return:
     """
 
-    engine = create_engine('sqlite:///:memory:')
+    engine = create_engine("sqlite:///:memory:")
     Base.metadata.create_all(engine)
     session = sessionmaker(bind=engine)
     session = session()
