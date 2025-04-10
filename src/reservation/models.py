@@ -28,7 +28,11 @@ class Reservation(Base):
     id = Column(Integer, primary_key=True, index=True)
     customer_name = Column(String, nullable=False)
     table_id = Column(Integer, ForeignKey("tables.id"), nullable=False)
-    reservation_time = Column(DateTime, nullable=False, default=datetime.datetime.now(datetime.UTC))
+    reservation_time = Column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.datetime.now(datetime.UTC),
+    )
     duration_minutes = Column(Integer, nullable=False)
 
     table = relationship("Table", backref="reservations")
