@@ -205,7 +205,7 @@ class TestReservationModel:
     """Test class for the Reservation model."""
 
     def test_create_reservation_with_valid_data(
-            self, setup_database, create_test_table
+        self, setup_database, create_test_table
     ):
         """
         Test for creating a reservation with valid data.
