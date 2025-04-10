@@ -13,5 +13,5 @@ def mock_session():
 @pytest.fixture
 def mock_session_local(mock_session):
     """Фикстура для создания мока фабрики сессий."""
-    with patch('src.database.SessionLocal', return_value=mock_session):
+    with patch("src.database.SessionLocal", return_value=mock_session):
         yield

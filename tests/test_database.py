@@ -46,14 +46,16 @@ class TestGetDB:
 
         mock_session.close.assert_called_once()
 
-    @patch('src.database.SessionLocal')
+    @patch("src.database.SessionLocal")
     def test_session_creation_error(self, mock_sessionlocal):
         """
         Тест 3: Ошибка при создании сессии.
         Проверяет поведение при ошибке создания сессии.
         """
 
-        mock_sessionlocal.side_effect = OperationalError("mock statement", "mock params", "mock orig")
+        mock_sessionlocal.side_effect = OperationalError(
+            "mock statement", "mock params", "mock orig"
+        )
 
         with pytest.raises(OperationalError):
             db_generator = get_db()
@@ -78,7 +80,7 @@ class TestGetDB:
 
         mock_session.close.assert_called_once()
 
-    @patch('src.database.SessionLocal')
+    @patch("src.database.SessionLocal")
     def test_multiple_calls(self, mock_sessionlocal, mock_session):
         """
         Тест 5: Множественные вызовы функции.
@@ -111,7 +113,7 @@ class TestGetDB:
         session1.close.assert_called_once()
         session2.close.assert_called_once()
 
-    @patch('src.database.SessionLocal')
+    @patch("src.database.SessionLocal")
     def test_db_error_on_close(self, mock_sessionlocal):
         """
         Тест 6: Ошибка при закрытии сессии.
