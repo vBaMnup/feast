@@ -10,6 +10,8 @@ class TableBase(BaseModel):
     seats: int
     location: Optional[str] = None
 
+    model_config = ConfigDict(from_attributes=True)
+
 
 class TableCreate(TableBase):
     """Table creation schema."""
@@ -22,8 +24,6 @@ class Table(TableBase):
 
     id: int
 
-    model_config = ConfigDict(from_attributes=True)
-
 
 class ReservationBase(BaseModel):
     """Reservation schema."""
@@ -32,6 +32,8 @@ class ReservationBase(BaseModel):
     table_id: int
     reservation_time: datetime
     duration_minutes: int
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ReservationCreate(ReservationBase):
@@ -44,5 +46,3 @@ class Reservation(ReservationBase):
     """Reservation schema."""
 
     id: int
-
-    model_config = ConfigDict(from_attributes=True)
