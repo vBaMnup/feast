@@ -1,0 +1,16 @@
+# Исключаем файлы и каталоги, которые не нужны в финальном образе
+.git
+.gitignore
+*.pyc
+__pycache__
+*.md
+.env
+tests
+*.log
+Dockerfile*
+docker-compose*
+.docker/
+.dockerignore
+.ruff_cache/
+.idea/
+venv/
