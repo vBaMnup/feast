@@ -23,8 +23,13 @@ jobs:
 
     - name: Install dependencies
       run: |
+        echo "Attempting to display requirements file:"
+        cat requirements/dev.txt
+        echo "--- End of requirements file ---"
         python -m pip install --upgrade pip
-        pip install -r requirements/dev.txt
+        echo "Attempting to install dependencies using absolute path:"
+        pip install -r ${{ github.workspace }}/requirements/dev.txt
+
 
     - name: Run tests with coverage
       run: pytest --cov=src tests/
