@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -80,56 +80,89 @@ class TestReservationCRUD:
         assert result == []
 
     def test_create_reservation_success(self):
-        """Test successful reservation creation"""
+        """Test successful reservation creation."""
 
         mock_db = MagicMock(spec=Session)
+
+        reservation_datetime = datetime(2025, 6, 10, 18, 0, tzinfo=timezone.utc)
+
         reservation_in = schemas.ReservationCreate(
             customer_name="Иванов Иван",
             table_id=1,
-            reservation_time=datetime(2025, 6, 10, 18, 0),
+            reservation_time=reservation_datetime,
             duration_minutes=60,
         )
+
         expected_reservation = models.Reservation(
             id=1,
             customer_name="Иванов Иван",
             table_id=1,
-            reservation_time=datetime(2025, 6, 10, 18, 0),
+            reservation_time=reservation_datetime,
             duration_minutes=60,
         )
+
         mock_db.commit.return_value = None
         mock_db.scalar.return_value = None
-
         mock_db.add.return_value = None
         mock_db.refresh.return_value = None
+        mock_db.get.return_value = MagicMock()
 
         with patch(
             "src.reservation.models.Reservation", return_value=expected_reservation
         ) as mock_reservation:
-            mock_reservation.reservation_time = datetime(2025, 4, 10, 18, 0)
+            mock_reservation.reservation_time = reservation_datetime
             mock_reservation.duration_minutes = 60
 
-            result = create_reservation(mock_db, reservation_in)
+            with patch(
+                "src.reservation.service.check_reservation_conflicts", return_value=None
+            ):
+                result = create_reservation(mock_db, reservation_in)
 
-        assert result == expected_reservation
-        mock_db.commit.assert_called_once()
+                assert result == expected_reservation
+                mock_db.add.assert_called_once()
+                mock_db.commit.assert_called_once()
+                mock_db.refresh.assert_called_once()
 
     def test_create_reservation_conflict(self):
-        """Test reservation creation with conflict"""
+        """Test creating a reservation with a conflict."""
 
         mock_db = MagicMock(spec=Session)
+
+        reservation_time = datetime(2025, 6, 10, 18, 0, tzinfo=timezone.utc)
+
         reservation_in = schemas.ReservationCreate(
             customer_name="Иванов Иван",
             table_id=1,
-            reservation_time=datetime(2025, 6, 10, 18, 0),
+            reservation_time=reservation_time,
             duration_minutes=60,
         )
 
-        with patch("src.reservation.service.create_reservation", return_value=True):
-            with pytest.raises(HTTPException) as exc_info:
-                create_reservation(mock_db, reservation_in)
+        mock_db.get.return_value = MagicMock()
 
-        assert exc_info.value.status_code == status.HTTP_409_CONFLICT
-        assert "Конфликт бронирования" in exc_info.value.detail
+        with patch(
+            "src.reservation.service.validate_table_exists"
+        ) as mock_validate_table:
+            with patch(
+                "src.reservation.service.validate_reservation_data"
+            ) as mock_validate_data:
+                with patch(
+                    "src.reservation.service.check_reservation_conflicts"
+                ) as mock_check_conflicts:
+                    conflict_exception = HTTPException(
+                        status_code=status.HTTP_409_CONFLICT,
+                        detail="Конфликт бронирования: столик уже занят в указанный временной слот.",
+                    )
+                    mock_check_conflicts.side_effect = conflict_exception
+
+                    with pytest.raises(HTTPException) as exc_info:
+                        create_reservation(mock_db, reservation_in)
+
+                    assert exc_info.value.status_code == status.HTTP_409_CONFLICT
+                    assert "Конфликт бронирования" in exc_info.value.detail
+
+                    mock_validate_table.assert_called_once()
+                    mock_validate_data.assert_called_once()
+                    mock_check_conflicts.assert_called_once()
 
     def test_create_reservation_database_error(self):
         """Test reservation creation with database error"""
@@ -138,7 +171,7 @@ class TestReservationCRUD:
         reservation_in = schemas.ReservationCreate(
             customer_name="Ошибка",
             table_id=1,
-            reservation_time=datetime(2025, 6, 10, 18, 0),
+            reservation_time=datetime(2025, 6, 10, 18, 0, tzinfo=timezone.utc),
             duration_minutes=60,
         )
         mock_db.commit.side_effect = SQLAlchemyError("Ошибка БД")
@@ -199,7 +232,7 @@ class TestReservationCRUD:
         reservation_in = schemas.ReservationCreate(
             customer_name="Тест",
             table_id=1,
-            reservation_time=datetime(2025, 6, 10, 18, 0),
+            reservation_time=datetime(2025, 6, 10, 18, 0, tzinfo=timezone.utc),
             duration_minutes=duration,
         )
 
@@ -227,7 +260,9 @@ class TestReservationCRUD:
             assert result.id == 1
             assert result.customer_name == "Тест"
             assert result.table_id == 1
-            assert result.reservation_time == datetime(2025, 6, 10, 18, 0)
+            assert result.reservation_time == datetime(
+                2025, 6, 10, 18, 0, tzinfo=timezone.utc
+            )
             assert result.duration_minutes == duration
 
     def test_create_reservation_past_date(self):
@@ -237,7 +272,7 @@ class TestReservationCRUD:
         reservation_in = schemas.ReservationCreate(
             customer_name="Тест",
             table_id=1,
-            reservation_time=datetime(2020, 1, 1, 12, 0),
+            reservation_time=datetime(2020, 1, 1, 12, 0, tzinfo=timezone.utc),
             duration_minutes=60,
         )
 

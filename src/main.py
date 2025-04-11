@@ -4,7 +4,7 @@ from fastapi.responses import JSONResponse
 from src.reservation.router import router as reservation_router
 from src.tables.router import router as table_router
 
-app = FastAPI(title="Reservation API")
+app = FastAPI(title="Feast API")
 
 app.include_router(table_router)
 app.include_router(reservation_router)
