@@ -18,16 +18,9 @@ jobs:
       with:
         python-version: '3.12'
 
-    - name: List files in workspace
-      run: ls -R .
-
     - name: Install dependencies
       run: |
-        echo "Attempting to display requirements file:"
-        cat requirements/dev.txt
-        echo "--- End of requirements file ---"
         python -m pip install --upgrade pip
-        echo "Attempting to install dependencies using absolute path:"
         pip install -r ${{ github.workspace }}/requirements/dev.txt
 
 
