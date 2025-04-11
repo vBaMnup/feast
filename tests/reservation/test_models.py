@@ -5,7 +5,8 @@ from datetime import timezone
 import pytest
 from sqlalchemy.exc import IntegrityError, DataError
 
-from src.reservation.models import Table, Reservation
+from src.reservation.models import Reservation
+from src.tables.models import Table
 
 
 class TestTableModel:

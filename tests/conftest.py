@@ -5,7 +5,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from src.database import Base
-from src.reservation.models import Table
+from src.tables.models import Table
 
 
 @pytest.fixture

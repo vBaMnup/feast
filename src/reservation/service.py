@@ -1,113 +1,109 @@
-from typing import List, Optional, Dict, Any
+from datetime import timedelta
+from typing import List
 
 from fastapi import HTTPException, status
-from sqlalchemy import select
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session
 
-from src.reservation.models import Table as TableModel
-from src.reservation.schemas import TableCreate
+from src.reservation import models, schemas
+from src.tables.models import Table
 
 
-def get_table(db: Session, table_id: int) -> Optional[TableModel]:
+def get_reservations(db: Session) -> List[models.Reservation]:
     """
-    Gets table by id
-
-    :param db: Database session
-    :param table_id: ID of table
-    :return: Table
-    """
-
-    stmt = select(TableModel).where(TableModel.id == table_id)
-    result = db.execute(stmt).scalar_one_or_none()
-    return result
-
-
-def get_tables(db: Session, skip: int = 0, limit: int = 100) -> List[TableModel]:
-    """
-    Gets all tables
-
-    :param db: Database session
-    :param skip: Number of tables to skip
-    :param limit: Number of tables to return
-    :return: List of tables
-    """
-
-    stmt = select(TableModel).offset(skip).limit(limit)
-    result = db.execute(stmt).scalars().all()
-    return result
-
-
-def create_table(db: Session, table_in: TableCreate) -> TableModel:
-    """
-    Creates a new table.
-
+    Get all reservations
     :param db: Session
-    :param table_in: TableCreate
-    :return: Table
+    :return: List of reservations
     """
 
-    try:
-        db_table = TableModel(**table_in.model_dump(exclude_none=True))
-        db.add(db_table)
-        db.commit()
-        db.refresh(db_table)
-        return db_table
-    except SQLAlchemyError as e:
-        db.rollback()
+    return db.query(models.Reservation).all()
+
+
+def create_reservation(
+    db: Session, reservation: schemas.ReservationCreate
+) -> models.Reservation:
+    """
+    Create reservation
+    :param db: Session
+    :param reservation: Reservation
+    :return: Reservation
+    """
+
+    table = db.query(Table).filter(Table.id == reservation.table_id).first()
+    if not table:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Ошибка при создании столика: {str(e)}",
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Table with id {reservation.table_id} not found",
         )
 
+    end_time = reservation.reservation_time + timedelta(
+        minutes=reservation.duration_minutes
+    )
 
-def delete_table(db: Session, table_id: int) -> Optional[TableModel]:
-    """
-    Deletes an existing table.
-
-    :param db: Session
-    :param table_id: ID of the table to delete
-    :return: Table
-    """
-
-    try:
-        db_table = get_table(db, table_id)
-        if not db_table:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Столик с id={table_id} не найден.",
+    conflicts = (
+        db.query(models.Reservation)
+        .filter(
+            and_(
+                models.Reservation.table_id == reservation.table_id,
+                or_(
+                    and_(
+                        models.Reservation.reservation_time
+                        <= reservation.reservation_time,
+                        models.Reservation.reservation_time
+                        + timedelta(minutes=models.Reservation.duration_minutes)
+                        > reservation.reservation_time,
+                    ),
+                    and_(
+                        models.Reservation.reservation_time < end_time,
+                        models.Reservation.reservation_time
+                        + timedelta(minutes=models.Reservation.duration_minutes)
+                        >= end_time,
+                    ),
+                    and_(
+                        models.Reservation.reservation_time
+                        >= reservation.reservation_time,
+                        models.Reservation.reservation_time
+                        + timedelta(minutes=models.Reservation.duration_minutes)
+                        <= end_time,
+                    ),
+                ),
             )
-        db.delete(db_table)
-        db.commit()
-        return db_table
-    except SQLAlchemyError as e:
-        db.rollback()
+        )
+        .first()
+    )
+
+    if conflicts:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Ошибка при удалении столика: {str(e)}",
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Table is already reserved during this time period",
         )
 
+    db_reservation = models.Reservation(**reservation.dict())
+    db.add(db_reservation)
+    db.commit()
+    db.refresh(db_reservation)
+    return db_reservation
 
-def bulk_create_tables(
-    db: Session, tables_data: List[Dict[str, Any]]
-) -> List[TableModel]:
+
+def delete_reservation(db: Session, reservation_id: int) -> None:
     """
-    Creates multiple tables in bulk.
-
+    Delete reservation
     :param db: Session
-    :param tables_data: List of table data
-    :return: List of created tables
+    :param reservation_id: Reservation
+    :return: None
     """
-    try:
-        tables = [TableModel(**data) for data in tables_data]
-        db.add_all(tables)
-        db.commit()
-        for table in tables:
-            db.refresh(table)
-        return tables
-    except SQLAlchemyError as e:
-        db.rollback()
+
+    reservation = (
+        db.query(models.Reservation)
+        .filter(models.Reservation.id == reservation_id)
+        .first()
+    )
+    if not reservation:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Ошибка при массовом создании столиков: {str(e)}",
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Reservation with id {reservation_id} not found",
         )
+
+    db.delete(reservation)
+    db.commit()
+    return None

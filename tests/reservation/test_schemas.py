@@ -1,15 +1,10 @@
-import pytest
 from datetime import datetime
+
+import pytest
 from pydantic import ValidationError
 
-from src.reservation.schemas import (
-    TableBase,
-    TableCreate,
-    Table,
-    Reservation,
-    ReservationCreate,
-    ReservationBase,
-)
+from src.reservation.schemas import Reservation, ReservationCreate, ReservationBase
+from src.tables.schemas import Table, TableBase, TableCreate
 
 
 class TestTablePydanticModels:
