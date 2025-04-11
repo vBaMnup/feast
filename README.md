@@ -1,3 +1,5 @@
+[![Run Tests](https://github.com/vBaMnup/feast/actions/workflows/tests.yml/badge.svg)](https://github.com/vBaMnup/feast/actions/workflows/tests.yml)
+
 # Feast API
 
 **Feast API** — это API-сервис для бронирования столиков, разработанный с использованием FastAPI, SQLAlchemy и PostgreSQL. Проект поддерживает функциональность создания, получения и удаления бронирований и столиков, а также включает автоматизированное тестирование, миграции Alembic и конфигурацию через Docker.
