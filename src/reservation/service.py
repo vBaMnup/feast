@@ -2,108 +2,98 @@ from datetime import timedelta
 from typing import List
 
 from fastapi import HTTPException, status
-from sqlalchemy import and_, or_
+from sqlalchemy import select, exists, and_, func
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from src.reservation import models, schemas
-from src.tables.models import Table
 
 
-def get_reservations(db: Session) -> List[models.Reservation]:
+def get_reservations(
+    db: Session, skip: int = 0, limit: int = 100
+) -> List[models.Reservation]:
     """
-    Get all reservations
+    Gets all reservations
     :param db: Session
-    :return: List of reservations
+    :param skip: Skips
+    :param limit: Limit
+    :return: List
     """
 
-    return db.query(models.Reservation).all()
+    stmt = select(models.Reservation).offset(skip).limit(limit)
+    return db.scalars(stmt).all()
 
 
 def create_reservation(
-    db: Session, reservation: schemas.ReservationCreate
+    db: Session, reservation_in: schemas.ReservationCreate
 ) -> models.Reservation:
     """
-    Create reservation
+    Creates a new reservation
     :param db: Session
-    :param reservation: Reservation
+    :param reservation_in: Reservation
     :return: Reservation
     """
 
-    table = db.query(Table).filter(Table.id == reservation.table_id).first()
-    if not table:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Table with id {reservation.table_id} not found",
-        )
+    try:
+        new_start = reservation_in.reservation_time
+        new_end = new_start + timedelta(minutes=reservation_in.duration_minutes)
 
-    end_time = reservation.reservation_time + timedelta(
-        minutes=reservation.duration_minutes
-    )
-
-    conflicts = (
-        db.query(models.Reservation)
-        .filter(
-            and_(
-                models.Reservation.table_id == reservation.table_id,
-                or_(
-                    and_(
+        conflict_subquery = (
+            exists()
+            .where(
+                and_(
+                    models.Reservation.table_id == reservation_in.table_id,
+                    models.Reservation.reservation_time < new_end,
+                    (
                         models.Reservation.reservation_time
-                        <= reservation.reservation_time,
-                        models.Reservation.reservation_time
-                        + timedelta(minutes=models.Reservation.duration_minutes)
-                        > reservation.reservation_time,
-                    ),
-                    and_(
-                        models.Reservation.reservation_time < end_time,
-                        models.Reservation.reservation_time
-                        + timedelta(minutes=models.Reservation.duration_minutes)
-                        >= end_time,
-                    ),
-                    and_(
-                        models.Reservation.reservation_time
-                        >= reservation.reservation_time,
-                        models.Reservation.reservation_time
-                        + timedelta(minutes=models.Reservation.duration_minutes)
-                        <= end_time,
-                    ),
-                ),
+                        + func.make_interval(
+                            0, 0, 0, 0, 0, models.Reservation.duration_minutes
+                        )
+                    )
+                    > new_start,
+                )
             )
+            .select()
         )
-        .first()
-    )
 
-    if conflicts:
+        if db.scalar(conflict_subquery):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Конфликт бронирования: столик уже занят в указанный временной слот.",
+            )
+
+        db_reservation = models.Reservation(
+            **reservation_in.model_dump(exclude_none=True)
+        )
+        db.add(db_reservation)
+        db.commit()
+        db.refresh(db_reservation)
+        return db_reservation
+
+    except SQLAlchemyError as e:
+        db.rollback()
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Table is already reserved during this time period",
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Ошибка при создании бронирования: {str(e)}",
         )
-
-    db_reservation = models.Reservation(**reservation.dict())
-    db.add(db_reservation)
-    db.commit()
-    db.refresh(db_reservation)
-    return db_reservation
 
 
 def delete_reservation(db: Session, reservation_id: int) -> None:
     """
-    Delete reservation
+    Deletes a reservation
     :param db: Session
     :param reservation_id: Reservation
     :return: None
     """
 
-    reservation = (
-        db.query(models.Reservation)
-        .filter(models.Reservation.id == reservation_id)
-        .first()
-    )
+    stmt = select(models.Reservation).where(models.Reservation.id == reservation_id)
+    reservation = db.scalar(stmt)
+
     if not reservation:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Reservation with id {reservation_id} not found",
+            detail=f"Бронирование с id {reservation_id} не найдено",
         )
 
     db.delete(reservation)
     db.commit()
-    return None

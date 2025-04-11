@@ -1,7 +1,13 @@
-import datetime
-
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    DateTime,
+    ForeignKey,
+    Index,
+)
 from sqlalchemy.orm import relationship
+import datetime
 
 from src.database import Base
 
@@ -10,6 +16,10 @@ class Reservation(Base):
     """Model for reservations."""
 
     __tablename__ = "reservations"
+
+    __table_args__ = (
+        Index("ix_table_id_reservation_time", "table_id", "reservation_time"),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
     customer_name = Column(String, nullable=False)
