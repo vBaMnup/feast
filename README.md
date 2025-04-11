@@ -98,6 +98,35 @@ alembic upgrade head
 pytest
 ```
 
+Покрытие тестами:
+
+```text
+Name                            Stmts   Miss  Cover
+---------------------------------------------------
+src/__init__.py                     0      0   100%
+src/config.py                      11      0   100%
+src/database.py                    12      0   100%
+src/logging_config.py              13      4    69%
+src/main.py                        33      2    94%
+src/reservation/__init__.py         0      0   100%
+src/reservation/exceptions.py      21      0   100%
+src/reservation/models.py          15      0   100%
+src/reservation/router.py          19      0   100%
+src/reservation/schemas.py         12      0   100%
+src/reservation/service.py         34      2    94%
+src/reservation/utils.py            6      0   100%
+src/tables/__init__.py              0      0   100%
+src/tables/exceptions.py            3      0   100%
+src/tables/models.py               10      0   100%
+src/tables/router.py               19      0   100%
+src/tables/schemas.py              11      0   100%
+src/tables/service.py              29      2    93%
+src/tables/utils.py                 9      0   100%
+---------------------------------------------------
+TOTAL                             257     10    96%
+
+```
+
 
 ## Документация API
 FastAPI автоматически генерирует документацию API, которая доступна по следующим адресам:
