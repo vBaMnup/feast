@@ -99,9 +99,9 @@ pytest
 ## Документация API
 FastAPI автоматически генерирует документацию API, которая доступна по следующим адресам:
 
-Swagger UI: http://localhost:8000/docs
+Swagger UI: http://localhost:8000/api/v1/docs
 
-ReDoc: http://localhost:8000/redoc
+ReDoc: http://localhost:8000/api/v1/redoc
 
 ## Логирование
 Логирование настраивается через внешний файл logging.ini, который прописан в корне проекта. Логи выводятся в консоль и записываются в файл app.log. Дополнительные настройки логирования можно изменить в файле logging.ini.
