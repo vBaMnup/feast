@@ -85,22 +85,24 @@ class TestTablePydanticModels:
         assert table.location == ""
 
     def test_zero_seats(self):
-        """Test creating a table with zero seats."""
+        """Test creating a table with zero seats. Should be more than 0."""
 
-        table = TableBase(name="Декоративный стол", seats=0, location="Фойе")
+        with pytest.raises(ValidationError) as exc_info:
+            TableBase(name="Декоративный стол", seats=0, location="Фойе")
 
-        assert table.name == "Декоративный стол"
-        assert table.seats == 0
-        assert table.location == "Фойе"
+        error_details = exc_info.value.errors()
+        assert error_details[0]["loc"] == ("seats",)
+        assert error_details[0]["msg"] == "Input should be greater than 0"
 
     def test_negative_seats(self):
-        """Test creating a table with a negative number of seats."""
+        """Test creating a table with a negative number of seats. Should be more than 0."""
 
-        table = TableBase(name="Стол у окна", seats=-4, location="Зал 1")
+        with pytest.raises(ValidationError) as exc_info:
+            TableBase(name="Декоративный стол", seats=-4, location="Фойе")
 
-        assert table.name == "Стол у окна"
-        assert table.seats == -4
-        assert table.location == "Зал 1"
+        error_details = exc_info.value.errors()
+        assert error_details[0]["loc"] == ("seats",)
+        assert error_details[0]["msg"] == "Input should be greater than 0"
 
     def test_very_long_strings(self):
         """Test creating a table with very long strings."""
