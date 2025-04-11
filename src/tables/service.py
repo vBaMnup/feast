@@ -7,107 +7,73 @@ from sqlalchemy.orm import Session
 
 from src.tables.models import Table as TableModel
 from src.tables.schemas import TableCreate
-
-
-def get_table(db: Session, table_id: int) -> Optional[TableModel]:
-    """
-    Gets table by id
-
-    :param db: Database session
-    :param table_id: ID of table
-    :return: Table
-    """
-
-    stmt = select(TableModel).where(TableModel.id == table_id)
-    result = db.execute(stmt).scalar_one_or_none()
-    return result
+from src.tables.exceptions import create_db_error
+from src.tables.utils import _create_table_object
 
 
 def get_tables(db: Session, skip: int = 0, limit: int = 100) -> List[TableModel]:
     """
-    Gets all tables
+    Получение списка столиков с пагинацией
 
-    :param db: Database session
-    :param skip: Number of tables to skip
-    :param limit: Number of tables to return
-    :return: List of tables
+    Args:
+        db: Сессия базы данных
+        skip: Количество пропускаемых записей
+        limit: Максимальное количество возвращаемых записей
+
+    Returns:
+        Список объектов столиков
     """
-
     stmt = select(TableModel).offset(skip).limit(limit)
-    result = db.execute(stmt).scalars().all()
-    return result
+    return db.execute(stmt).scalars().all()
 
 
 def create_table(db: Session, table_in: TableCreate) -> TableModel:
     """
-    Creates a new table.
+    Создание нового столика
 
-    :param db: Session
-    :param table_in: TableCreate
-    :return: Table
+    Args:
+        db: Сессия базы данных
+        table_in: Данные для создания столика
+
+    Returns:
+        Созданный объект столика
+
+    Raises:
+        HTTPException: При ошибке создания столика
     """
-
     try:
-        db_table = TableModel(**table_in.model_dump(exclude_none=True))
-        db.add(db_table)
-        db.commit()
-        db.refresh(db_table)
-        return db_table
+        return _create_table_object(db, table_in.model_dump(exclude_none=True))
     except SQLAlchemyError as e:
         db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Ошибка при создании столика: {str(e)}",
-        )
+        raise create_db_error("создании", str(e))
 
 
 def delete_table(db: Session, table_id: int) -> Optional[TableModel]:
     """
-    Deletes an existing table.
+    Удаление существующего столика
 
-    :param db: Session
-    :param table_id: ID of the table to delete
-    :return: Table
+    Args:
+        db: Сессия базы данных
+        table_id: Идентификатор удаляемого столика
+
+    Returns:
+        Удаленный объект столика
+
+    Raises:
+        HTTPException: Если столик не найден или возникла ошибка при удалении
     """
-
     try:
-        db_table = get_table(db, table_id)
+        db_table = db.get(TableModel, table_id)
         if not db_table:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Столик с id={table_id} не найден.",
             )
+
         db.delete(db_table)
         db.commit()
         return db_table
+
     except SQLAlchemyError as e:
         db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Ошибка при удалении столика: {str(e)}",
-        )
-
-
-def bulk_create_tables(
-    db: Session, tables_data: List[Dict[str, Any]]
-) -> List[TableModel]:
-    """
-    Creates multiple tables in bulk.
-
-    :param db: Session
-    :param tables_data: List of table data
-    :return: List of created tables
-    """
-    try:
-        tables = [TableModel(**data) for data in tables_data]
-        db.add_all(tables)
-        db.commit()
-        for table in tables:
-            db.refresh(table)
-        return tables
-    except SQLAlchemyError as e:
-        db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Ошибка при массовом создании столиков: {str(e)}",
-        )
+        raise create_db_error("удалении", str(e))
