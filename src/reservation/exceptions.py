@@ -1,4 +1,4 @@
-from datetime import timedelta, datetime
+from datetime import timedelta, datetime, timezone
 
 from fastapi import HTTPException, status
 from sqlalchemy import exists, and_, func
@@ -45,7 +45,7 @@ def validate_reservation_data(reservation_data: schemas.ReservationCreate) -> No
             detail="Продолжительность бронирования должна быть больше нуля.",
         )
 
-    if reservation_data.reservation_time < datetime.now():
+    if reservation_data.reservation_time < datetime.now(timezone.utc):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Время бронирования не может быть в прошлом.",
