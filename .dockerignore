@@ -2,7 +2,7 @@
 .git
 .gitignore
 *.pyc
-__pycache__
+*/__pycache__/
 *.md
 .env
 tests
