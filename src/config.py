@@ -1,6 +1,10 @@
-import os
-from dotenv import load_dotenv
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
-load_dotenv()
 
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://user:password@localhost/dbname")
+class Settings(BaseSettings):
+    DATABASE_URL: str = "sqlite:///./database.db"
+
+    model_config = SettingsConfigDict(env_file="../.env", env_file_encoding="utf-8")
+
+
+settings = Settings()
