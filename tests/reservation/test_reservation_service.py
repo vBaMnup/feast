@@ -1,6 +1,7 @@
-import pytest
-from datetime import datetime, timedelta
+from datetime import datetime
 from unittest.mock import MagicMock, patch
+
+import pytest
 from fastapi import HTTPException, status
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -25,7 +26,7 @@ class TestReservationCRUD:
     }
 
     def setup_mock_db(self, return_value=None):
-        """Настройка моков базы данных."""
+        """Setup mock database session."""
         mock_db = MagicMock(spec=Session)
         mock_result = MagicMock()
         mock_result.scalars.return_value.all.return_value = return_value or []
@@ -33,10 +34,7 @@ class TestReservationCRUD:
         return mock_db
 
     def test_get_reservations_default_params(self):
-        """
-        Test getting reservations with default parameters
-        :return:
-        """
+        """Test getting reservations with default parameters."""
 
         mock_db = MagicMock(spec=Session)
         expected_reservations = [models.Reservation(**self.MOCK_RESERVATION_DATA)]
@@ -52,12 +50,7 @@ class TestReservationCRUD:
 
     @pytest.mark.parametrize("skip, limit", [(5, 10), (0, 0), (-1, 5)])
     def test_get_reservations_pagination(self, skip, limit):
-        """
-        Test getting reservations with pagination
-        :param skip:
-        :param limit:
-        :return:
-        """
+        """Test getting reservations with pagination"""
 
         mock_db = MagicMock(spec=Session)
         expected_reservations = [models.Reservation(**self.MOCK_RESERVATION_DATA)]
@@ -73,10 +66,7 @@ class TestReservationCRUD:
         assert result == expected_reservations
 
     def test_get_reservations_empty(self):
-        """
-        Test getting reservations with empty result
-        :return:
-        """
+        """Test getting reservations with empty result"""
 
         mock_db = MagicMock(spec=Session)
         mock_db.scalars.return_value.all.return_value = []
@@ -90,10 +80,7 @@ class TestReservationCRUD:
         assert result == []
 
     def test_create_reservation_success(self):
-        """
-        Test successful reservation creation
-        :return:
-        """
+        """Test successful reservation creation"""
 
         mock_db = MagicMock(spec=Session)
         reservation_in = schemas.ReservationCreate(
@@ -127,9 +114,7 @@ class TestReservationCRUD:
         mock_db.commit.assert_called_once()
 
     def test_create_reservation_conflict(self):
-        """
-        Test reservation creation with conflict
-        """
+        """Test reservation creation with conflict"""
 
         mock_db = MagicMock(spec=Session)
         reservation_in = schemas.ReservationCreate(
@@ -147,10 +132,7 @@ class TestReservationCRUD:
         assert "Конфликт бронирования" in exc_info.value.detail
 
     def test_create_reservation_database_error(self):
-        """
-        Test reservation creation with database error
-        :return:
-        """
+        """Test reservation creation with database error"""
 
         mock_db = MagicMock(spec=Session)
         reservation_in = schemas.ReservationCreate(
@@ -167,10 +149,7 @@ class TestReservationCRUD:
         assert exc_info.value.status_code == status.HTTP_409_CONFLICT
 
     def test_delete_reservation_success(self):
-        """
-        Test successful reservation deletion
-        :return:
-        """
+        """Test successful reservation deletion"""
 
         mock_reservation = MagicMock(spec=models.Reservation)
         mock_db = MagicMock(spec=Session)
@@ -183,10 +162,7 @@ class TestReservationCRUD:
         assert result is None
 
     def test_delete_reservation_not_found(self):
-        """
-        Test reservation deletion with not found
-        :return:
-        """
+        """Test reservation deletion with not found"""
 
         mock_db = MagicMock(spec=Session)
         mock_db.scalar.return_value = None
@@ -199,10 +175,8 @@ class TestReservationCRUD:
         mock_db.delete.assert_not_called()
 
     def test_delete_reservation_database_error(self):
-        """
-        Test reservation deletion with database error
-        :return:
-        """
+        """Test reservation deletion with database error"""
+
         mock_db = MagicMock(spec=Session)
         mock_db.commit.side_effect = SQLAlchemyError("Ошибка удаления")
         mock_db.scalar.return_value = MagicMock(spec=models.Reservation)
@@ -219,11 +193,8 @@ class TestReservationCRUD:
 
     @pytest.mark.parametrize("duration", [-30, 0, 1440])
     def test_create_reservation_edge_durations(self, duration):
-        """
-        Test creating reservation with edge durations
-        :param duration:
-        :return:
-        """
+        """Test creating reservation with edge durations"""
+
         mock_db = MagicMock(spec=Session)
         reservation_in = schemas.ReservationCreate(
             customer_name="Тест",
@@ -260,10 +231,7 @@ class TestReservationCRUD:
             assert result.duration_minutes == duration
 
     def test_create_reservation_past_date(self):
-        """
-        Test creating reservation with past date
-        :return:
-        """
+        """Test creating reservation with past date"""
 
         mock_db = MagicMock(spec=Session)
         reservation_in = schemas.ReservationCreate(
@@ -273,22 +241,17 @@ class TestReservationCRUD:
             duration_minutes=60,
         )
 
-        # We expect an HTTPException because the date is in the past
         with pytest.raises(HTTPException) as exc_info:
             create_reservation(mock_db, reservation_in)
 
-        # Verify the exception details
         assert exc_info.value.status_code == status.HTTP_400_BAD_REQUEST
         assert exc_info.value.detail == "Время бронирования не может быть в прошлом."
 
-        # Verify that commit was not called since we're rejecting the reservation
         mock_db.commit.assert_not_called()
 
     def test_create_reservation_invalid_table_id(self):
-        """
-        Test creating reservation with invalid table ID
-        :return:
-        """
+        """Test creating reservation with invalid table ID"""
+
         mock_db = MagicMock(spec=Session)
         reservation_in = schemas.ReservationCreate(
             customer_name="Несуществующий стол",

@@ -10,10 +10,7 @@ from src.tables.models import Table
 
 @pytest.fixture
 def mock_session():
-    """
-    Fixtura for mock session
-    :return:
-    """
+    """Fixture for mock session"""
 
     session_mock = MagicMock()
     return session_mock
@@ -21,11 +18,7 @@ def mock_session():
 
 @pytest.fixture
 def mock_session_local(mock_session):
-    """
-    Fixtura for mock session
-    :param mock_session:
-    :return:
-    """
+    """Fixture for mock session local"""
 
     with patch("src.database.SessionLocal", return_value=mock_session):
         yield
@@ -33,25 +26,22 @@ def mock_session_local(mock_session):
 
 @pytest.fixture
 def setup_database():
-    """
-    Fixtura for setup database
-    :return:
-    """
+    """Setup database for tests."""
 
     engine = create_engine("postgresql://user:password@localhost:5432/test_dbname")
-    Base.metadata.create_all(bind=engine)  # Создаем таблицы
+    Base.metadata.create_all(bind=engine)
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
     session = SessionLocal()
-    yield session  # Предоставляем сессию для теста
+    yield session
 
     session.close()
-    Base.metadata.drop_all(bind=engine)  # Очищаем после теста
+    Base.metadata.drop_all(bind=engine)
 
 
 @pytest.fixture
 def create_test_table(setup_database):
-    """Создание тестового стола для использования в тестах."""
+    """Create a test table for testing."""
     session = setup_database
 
     test_table = Table(name="Тестовый стол", seats=4, location="Зал 1")

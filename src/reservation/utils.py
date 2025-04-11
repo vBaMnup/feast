@@ -6,14 +6,15 @@ from src.reservation import models
 
 def get_reservation_by_id(db: Session, reservation_id: int) -> models.Reservation:
     """
-    Получение бронирования по его идентификатору
+    Get a reservation by its ID.
 
     Args:
-        db: Сессия базы данных
-        reservation_id: Идентификатор бронирования
+        db: The database session.
+        reservation_id: The ID of the reservation to retrieve.
 
     Returns:
-        Объект бронирования или None, если бронирование не найдено
+        The reservation object.
     """
+
     stmt = select(models.Reservation).where(models.Reservation.id == reservation_id)
     return db.scalar(stmt)

@@ -10,15 +10,16 @@ from src.tables.models import Table
 
 def validate_table_exists(db: Session, table_id: int) -> None:
     """
-    Проверка существования стола с указанным ID
+    Checks if a table with the given ID exists in the database.
 
     Args:
-        db: Сессия базы данных
-        table_id: Идентификатор проверяемого стола
+        db: The database session.
+        table_id: The ID of the table to check.
 
     Raises:
-        HTTPException: Если стол не найден
+        HTTPException: If the table is not found.
     """
+
     table = db.get(Table, table_id)
     if not table:
         raise HTTPException(
@@ -29,14 +30,15 @@ def validate_table_exists(db: Session, table_id: int) -> None:
 
 def validate_reservation_data(reservation_data: schemas.ReservationCreate) -> None:
     """
-    Валидация данных бронирования
+    Checks if the reservation data is valid.
 
     Args:
-        reservation_data: Данные для проверки
+        reservation_data: The reservation data to validate.
 
     Raises:
-        HTTPException: При обнаружении невалидных данных
+        HTTPException: If the reservation data is not valid.
     """
+
     if reservation_data.duration_minutes <= 0:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -54,15 +56,16 @@ def check_reservation_conflicts(
     db: Session, reservation_data: schemas.ReservationCreate
 ) -> None:
     """
-    Проверка на конфликты с существующими бронированиями
+    Checks for conflicts between existing reservations and the new reservation.
 
     Args:
-        db: Сессия базы данных
-        reservation_data: Данные проверяемого бронирования
+        db: The database session.
+        reservation_data: The new reservation data.
 
     Raises:
-        HTTPException: При обнаружении конфликта бронирования
+        HTTPException: If a conflict is found.
     """
+
     new_start = reservation_data.reservation_time
     new_end = new_start + timedelta(minutes=reservation_data.duration_minutes)
 

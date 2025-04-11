@@ -18,16 +18,17 @@ def get_reservations(
     db: Session, skip: int = 0, limit: int = 100
 ) -> List[models.Reservation]:
     """
-    Получение списка всех бронирований с пагинацией
+    Get reservations with pagination
 
     Args:
-        db: Сессия базы данных
-        skip: Количество пропускаемых записей
-        limit: Максимальное количество возвращаемых записей
+        db: The database session.
+        skip: The number of records to skip.
+        limit: The maximum number of records to return.
 
     Returns:
-        Список объектов бронирования
+        A list of reservations.
     """
+
     stmt = select(models.Reservation).offset(skip).limit(limit)
     return db.scalars(stmt).all()
 
@@ -36,29 +37,23 @@ def create_reservation(
     db: Session, reservation_in: schemas.ReservationCreate
 ) -> models.Reservation:
     """
-    Создание нового бронирования с проверкой доступности стола
+    Create a new reservation.
 
     Args:
-        db: Сессия базы данных
-        reservation_in: Данные нового бронирования
+        db: The database session.
+        reservation_in: The reservation data.
 
     Returns:
-        Созданный объект бронирования
-
-    Raises:
-        HTTPException: При невалидных входных данных или конфликте бронирования
+        The created reservation.
     """
-    # Проверка существования стола
+
     validate_table_exists(db, reservation_in.table_id)
 
-    # Валидация данных бронирования
     validate_reservation_data(reservation_in)
 
     try:
-        # Проверка на конфликты бронирования
         check_reservation_conflicts(db, reservation_in)
 
-        # Создание бронирования
         reservation = models.Reservation(
             customer_name=reservation_in.customer_name,
             table_id=reservation_in.table_id,
@@ -81,15 +76,13 @@ def create_reservation(
 
 def delete_reservation(db: Session, reservation_id: int) -> None:
     """
-    Удаление существующего бронирования
+    Delete a reservation.
 
     Args:
-        db: Сессия базы данных
-        reservation_id: Идентификатор удаляемого бронирования
-
-    Raises:
-        HTTPException: Если бронирование не найдено или возникла ошибка при удалении
+        db: The database session.
+        reservation_id: The ID of the reservation to delete.
     """
+
     try:
         reservation = get_reservation_by_id(db, reservation_id)
 

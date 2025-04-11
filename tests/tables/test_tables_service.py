@@ -1,4 +1,4 @@
-from unittest.mock import patch, MagicMock, call
+from unittest.mock import patch, MagicMock
 
 import pytest
 from fastapi import HTTPException
@@ -93,22 +93,17 @@ class TestTableCRUD:
         mock_table = MagicMock(spec=TableModel)
         mock_db = MagicMock(spec=Session)
 
-        # Patch the db.get method to return the mock_table
         mock_db.get.return_value = mock_table
 
         with patch("src.tables.service.delete_table", return_value=mock_table):
             result = delete_table(mock_db, 1)
 
-            # Assert that db.get was called with the correct arguments
             mock_db.get.assert_called_with(TableModel, 1)
 
-            # Assert that db.delete was called with the correct arguments
             mock_db.delete.assert_called_with(mock_table)
 
-            # Assert that db.commit was called
             mock_db.commit.assert_called_once()
 
-            # Assert that the result is the mock_table
             assert result == mock_table
 
     def test_delete_table_not_found(self):

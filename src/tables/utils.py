@@ -7,15 +7,16 @@ from src.tables.models import Table
 
 def _create_table_object(db: Session, table_data: Dict[str, Any]) -> Table:
     """
-    Вспомогательная функция для создания объекта столика
+    Create a table object in the database.
 
     Args:
-        db: Сессия базы данных
-        table_data: Данные столика
+        db: The database session.
+        table_data: A dictionary containing the table data.
 
     Returns:
-        Созданный объект столика
+        The created table object.
     """
+
     db_table = Table(**table_data)
     db.add(db_table)
     db.commit()
