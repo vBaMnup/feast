@@ -1,113 +1,103 @@
-from typing import List, Optional, Dict, Any
+from typing import List
 
 from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from src.reservation.models import Table as TableModel
-from src.reservation.schemas import TableCreate
+from src.reservation import models, schemas
+from src.reservation.exceptions import (
+    validate_reservation_data,
+    validate_table_exists,
+    check_reservation_conflicts,
+)
+from src.reservation.utils import get_reservation_by_id
 
 
-def get_table(db: Session, table_id: int) -> Optional[TableModel]:
+def get_reservations(
+    db: Session, skip: int = 0, limit: int = 100
+) -> List[models.Reservation]:
     """
-    Gets table by id
+    Get reservations with pagination
 
-    :param db: Database session
-    :param table_id: ID of table
-    :return: Table
-    """
+    Args:
+        db: The database session.
+        skip: The number of records to skip.
+        limit: The maximum number of records to return.
 
-    stmt = select(TableModel).where(TableModel.id == table_id)
-    result = db.execute(stmt).scalar_one_or_none()
-    return result
-
-
-def get_tables(db: Session, skip: int = 0, limit: int = 100) -> List[TableModel]:
-    """
-    Gets all tables
-
-    :param db: Database session
-    :param skip: Number of tables to skip
-    :param limit: Number of tables to return
-    :return: List of tables
+    Returns:
+        A list of reservations.
     """
 
-    stmt = select(TableModel).offset(skip).limit(limit)
-    result = db.execute(stmt).scalars().all()
-    return result
+    stmt = select(models.Reservation).offset(skip).limit(limit)
+    return db.scalars(stmt).all()
 
 
-def create_table(db: Session, table_in: TableCreate) -> TableModel:
+def create_reservation(
+    db: Session, reservation_in: schemas.ReservationCreate
+) -> models.Reservation:
     """
-    Creates a new table.
+    Create a new reservation.
 
-    :param db: Session
-    :param table_in: TableCreate
-    :return: Table
+    Args:
+        db: The database session.
+        reservation_in: The reservation data.
+
+    Returns:
+        The created reservation.
     """
+
+    validate_table_exists(db, reservation_in.table_id)
+
+    validate_reservation_data(reservation_in)
 
     try:
-        db_table = TableModel(**table_in.model_dump(exclude_none=True))
-        db.add(db_table)
+        check_reservation_conflicts(db, reservation_in)
+
+        reservation = models.Reservation(
+            customer_name=reservation_in.customer_name,
+            table_id=reservation_in.table_id,
+            reservation_time=reservation_in.reservation_time,
+            duration_minutes=reservation_in.duration_minutes,
+        )
+
+        db.add(reservation)
         db.commit()
-        db.refresh(db_table)
-        return db_table
+        db.refresh(reservation)
+        return reservation
+
     except SQLAlchemyError as e:
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Ошибка при создании столика: {str(e)}",
+            detail=f"Ошибка создания бронирования: {str(e)}",
         )
 
 
-def delete_table(db: Session, table_id: int) -> Optional[TableModel]:
+def delete_reservation(db: Session, reservation_id: int) -> None:
     """
-    Deletes an existing table.
+    Delete a reservation.
 
-    :param db: Session
-    :param table_id: ID of the table to delete
-    :return: Table
+    Args:
+        db: The database session.
+        reservation_id: The ID of the reservation to delete.
     """
 
     try:
-        db_table = get_table(db, table_id)
-        if not db_table:
+        reservation = get_reservation_by_id(db, reservation_id)
+
+        if not reservation:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Столик с id={table_id} не найден.",
+                detail=f"Бронирование с id {reservation_id} не найдено",
             )
-        db.delete(db_table)
+
+        db.delete(reservation)
         db.commit()
-        return db_table
+
     except SQLAlchemyError as e:
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Ошибка при удалении столика: {str(e)}",
-        )
-
-
-def bulk_create_tables(
-    db: Session, tables_data: List[Dict[str, Any]]
-) -> List[TableModel]:
-    """
-    Creates multiple tables in bulk.
-
-    :param db: Session
-    :param tables_data: List of table data
-    :return: List of created tables
-    """
-    try:
-        tables = [TableModel(**data) for data in tables_data]
-        db.add_all(tables)
-        db.commit()
-        for table in tables:
-            db.refresh(table)
-        return tables
-    except SQLAlchemyError as e:
-        db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Ошибка при массовом создании столиков: {str(e)}",
+            detail=f"Ошибка удаления бронирования: {str(e)}",
         )
