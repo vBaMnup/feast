@@ -95,12 +95,9 @@ def health():
 if __name__ == "__main__":
     import uvicorn
 
-    # Используем настройки из settings для uvicorn.run
     uvicorn.run(
-        "src.main:app",  # Указываем путь к app
+        "src.main:app",
         host=settings.UVICORN_HOST,
         port=settings.UVICORN_PORT,
-        reload=True,  # Добавим reload для удобства разработки, если нужно
-        # Можно добавить log_config=None, если хотим полностью полагаться на нашу конфигурацию из logging.ini
-        # log_config=None
+        reload=True,
     )

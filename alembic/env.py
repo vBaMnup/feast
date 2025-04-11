@@ -1,3 +1,4 @@
+import logging
 import os
 from logging.config import fileConfig
 
@@ -5,7 +6,7 @@ from alembic import context
 from sqlalchemy import engine_from_config, pool
 
 from src.database import Base
-import src.models
+import src.tables.models
 import src.reservation.models
 
 if context.config.config_file_name is not None:

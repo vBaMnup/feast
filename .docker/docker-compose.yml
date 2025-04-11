@@ -8,10 +8,9 @@ services:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=${POSTGRES_DB}
-      - PGDATA=${PGDATA}
       - POSTGRES_INITDB_ARGS=${POSTGRES_INITDB_ARGS}
     volumes:
-      - postgres_data:/var/lib/postgresql/data/pgdata
+      - db_data:/var/lib/postgresql/data:delegated
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
       interval: 10s
@@ -38,7 +37,6 @@ services:
       db:
         condition: service_healthy
     environment:
-      - DATABASE_URL=postgresql://user:password@db:5432/dbname
       - PYTHONUNBUFFERED=1
     env_file:
       - .env
@@ -62,9 +60,4 @@ networks:
         - subnet: 172.28.0.0/16
 
 volumes:
-  postgres_data:
-    driver: local
-    driver_opts:
-      type: 'none'
-      o: 'bind'
-      device: './postgres-data'
+  db_data:
